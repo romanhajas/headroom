@@ -82,8 +82,13 @@ struct SessionRing: View {
     var body: some View {
         let used = min(1, reading.sessionUsed ?? 0)
         let drawn = animated ? (shown ?? 0) : used
+        let inner = max(2, lineWidth * 0.4), gap = lineWidth * 0.35
+        GeometryReader { box in
+        // The text gets a box that stays inside the inner ring's circle, corners included.
+        let room = min(box.size.width, box.size.height) - 2 * (lineWidth + gap + inner) - 4
         ZStack {
-            // Inset by half the line, so the stroke stays inside the ring's frame.
+            // Outer ring: the session used. Inset by half the line, so the stroke
+            // stays inside the ring's frame.
             ZStack {
                 Circle().stroke(.quaternary, lineWidth: lineWidth)
                 Circle()
@@ -93,6 +98,19 @@ struct SessionRing: View {
                     .opacity(drawn > 0 ? 1 : 0)
             }
             .padding(lineWidth / 2)
+            // Inner ring: the session's 5 hours passing, like a clock. Outer ahead of
+            // inner means the session is going faster than the time.
+            if let elapsed = reading.sessionElapsed {
+                ZStack {
+                    Circle().stroke(.quaternary, lineWidth: inner)
+                    Circle()
+                        .trim(from: 0, to: elapsed)
+                        .stroke(Color.secondary, style: StrokeStyle(lineWidth: inner, lineCap: .round))
+                        .rotationEffect(.degrees(-90))
+                }
+                .padding(lineWidth + gap + inner / 2)
+                .animation(.linear(duration: 0.6), value: elapsed)
+            }
             VStack(spacing: 1) {
                 if let ends = reading.sessionEnds {
                     Text(ends, style: .timer)
@@ -114,8 +132,10 @@ struct SessionRing: View {
                 }
             }
             .lineLimit(1)
-            .minimumScaleFactor(0.6)
-            .padding(lineWidth + 10)
+            .minimumScaleFactor(0.4)
+            .frame(width: max(0, room * 0.8), height: max(0, room * 0.55))
+        }
+        .frame(width: box.size.width, height: box.size.height)
         }
         .opacity(reading.note.map { $0.isCalm ? 0.75 : 0.5 } ?? 1)
         .animation(.smooth, value: used)

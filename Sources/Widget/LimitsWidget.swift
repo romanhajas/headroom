@@ -41,8 +41,13 @@ struct LimitsProvider: TimelineProvider {
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<LimitsEntry>) -> Void) {
         let now = Date(), limits = LimitsStore.load()
-        let entries = [now] + Reading.changes(of: limits, after: now)
-        completion(Timeline(entries: entries.map { LimitsEntry(date: $0, limits: limits) },
+        var moments = [now] + Reading.changes(of: limits, after: now)
+        // The inner ring moves with the clock: an entry every 2 minutes while a session runs.
+        // Planned entries don't count against the widget's reload allowance.
+        if let ends = limits?.session?.resetsAt, ends > now {
+            moments += Array(stride(from: now.addingTimeInterval(120), to: ends, by: 120))
+        }
+        completion(Timeline(entries: Set(moments).sorted().map { LimitsEntry(date: $0, limits: limits) },
                             policy: .after(now.addingTimeInterval(15 * 60))))
     }
 }

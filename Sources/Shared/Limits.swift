@@ -113,6 +113,13 @@ struct Reading {
     /// When the session limit will be hit at the pace used so far, if that's before
     /// the session resets; nil while there's room to spare.
     var runsOutAt: Date?
+    /// The moment this reading is for.
+    var at = Date.distantPast
+
+    /// How much of the session's 5 hours has passed (0...1), while one is running.
+    var sessionElapsed: Double? {
+        sessionEnds.map { max(0, min(1, 1 - $0.timeIntervalSince(at) / Self.window)) }
+    }
 
     /// Figures older than this are flagged: the app isn't getting new ones.
     static let staleAfter: TimeInterval = 40 * 60
@@ -122,6 +129,7 @@ struct Reading {
     static let paceAfter: TimeInterval = 15 * 60
 
     init(_ limits: Limits?, at now: Date) {
+        at = now
         guard let limits else { note = .noData; return }
         func current(_ window: Limits.Window?) -> (Double?, Date?) {
             guard let window else { return (nil, nil) }
