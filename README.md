@@ -17,9 +17,8 @@ mobile apps.
 - **A desktop widget**, small or medium. A ring shows how much of the session is
   used, with a live countdown to its reset inside; a bar shows the week. Green
   while there's room, orange past half, red near the limit. Click it to refresh.
-- **Your pace at a glance.** A thin bar under the countdown fills as the 5 hours
-  pass. When the ring is ahead of it, you're on course to hit the limit before
-  the reset.
+- **Time left at a glance.** A thin bar under the countdown empties live as the
+  5 hours run out, next to the ring showing how much of them you've used.
 - **A menu bar item:** a small ring that fills as the session is used, with the
   percentage or the time left next to it. Click it for the details, including
   the separate Opus and Sonnet weekly limits when your plan has them.

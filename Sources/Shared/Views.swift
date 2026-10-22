@@ -102,9 +102,9 @@ struct SessionRing: View {
                         .font(.system(.title3, design: .rounded).weight(.semibold))
                         .monospacedDigit()
                         .multilineTextAlignment(.center)
-                    // How much of the 5 hours has passed, filling live (widgets allow this).
-                    // Ring ahead of the bar: on pace to hit the limit before the reset.
-                    ProgressView(timerInterval: ends.addingTimeInterval(-Self.window)...ends, countsDown: false) {
+                    // How much of the 5 hours is left, emptying live with the countdown
+                    // above it (widgets allow this one).
+                    ProgressView(timerInterval: ends.addingTimeInterval(-Self.window)...ends, countsDown: true) {
                         EmptyView()
                     } currentValueLabel: {
                         EmptyView()
