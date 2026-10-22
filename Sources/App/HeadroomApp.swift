@@ -25,6 +25,7 @@ enum Prefs {
     static let showInMenuBar = "showInMenuBar"
     static let menuBarText = "menuBarText"
     static let refreshMinutes = "refreshMinutes"
+    static let animations = "animations"
     static let setUpLoginItem = "setUpLoginItem"
 }
 
@@ -47,12 +48,43 @@ struct MenuBarLabel: View {
 
     var body: some View {
         let reading = Reading(monitor.limits, at: monitor.now)
-        Image(systemName: "gauge.with.dots.needle.33percent")
+        Image(nsImage: MenuBarIcon.image(used: reading.sessionUsed))
         switch MenuBarText(rawValue: text) ?? .percent {
         case .percent: Text(percent(reading.sessionUsed))
         case .timeLeft: Text(reading.sessionEnds.map { When.left(until: $0, from: monitor.now) } ?? "–")
         case .nothing: EmptyView()
         }
+    }
+}
+
+/// The app icon's ring, as a menu bar template image: the arc fills as the session is used.
+enum MenuBarIcon {
+    static func image(used: Double?) -> NSImage {
+        let image = NSImage(size: NSSize(width: 16, height: 16), flipped: false) { rect in
+            let center = NSPoint(x: rect.midX, y: rect.midY), radius: CGFloat = 6, width: CGFloat = 2.2
+            let track = NSBezierPath()
+            track.appendArc(withCenter: center, radius: radius, startAngle: 0, endAngle: 360)
+            track.lineWidth = width
+            NSColor.black.withAlphaComponent(0.3).setStroke()
+            track.stroke()
+
+            let fraction = min(1, max(0, used ?? 0))
+            if fraction > 0 {
+                let arc = NSBezierPath()
+                arc.appendArc(withCenter: center, radius: radius, startAngle: 90, endAngle: 90 - 360 * fraction, clockwise: true)
+                arc.lineWidth = width
+                arc.lineCapStyle = .round
+                NSColor.black.setStroke()
+                arc.stroke()
+            }
+
+            let dot: CGFloat = 3.2
+            NSColor.black.setFill()
+            NSBezierPath(ovalIn: NSRect(x: center.x - dot / 2, y: center.y - dot / 2, width: dot, height: dot)).fill()
+            return true
+        }
+        image.isTemplate = true  // drawn in the menu bar's own colour, light or dark
+        return image
     }
 }
 
@@ -97,7 +129,7 @@ final class Monitor: ObservableObject {
 
     var interval: TimeInterval {
         let minutes = UserDefaults.standard.integer(forKey: Prefs.refreshMinutes)
-        return TimeInterval(max(3, minutes == 0 ? 3 : minutes) * 60)
+        return TimeInterval((minutes == 0 ? 3 : minutes) * 60)
     }
 
     func start() {
@@ -135,7 +167,8 @@ final class Monitor: ObservableObject {
         limits = result.limits
         try? LimitsStore.save(result.limits)
         if let wait = result.retryAfter {
-            backoff = min(30 * 60, max(interval, wait, backoff * 2))
+            // Wait at least 3 minutes after the server pushes back, whatever the interval.
+            backoff = min(30 * 60, max(3 * 60, interval, wait, backoff * 2))
             notBefore = .now.addingTimeInterval(backoff)
         } else {
             backoff = 0
@@ -160,17 +193,20 @@ final class Monitor: ObservableObject {
 
 struct DetailView: View {
     @EnvironmentObject private var monitor: Monitor
+    @AppStorage(Prefs.animations) private var animations = true
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
+        let live = animations && !reduceMotion
         TimelineView(.periodic(from: .now, by: 30)) { context in
             let reading = Reading(monitor.limits, at: context.date)
             VStack(alignment: .leading, spacing: 14) {
-                MediumLimits(reading: reading)
+                MediumLimits(reading: reading, live: live, busy: monitor.busy)
                     .frame(height: 118)
                 if reading.weekOpusUsed != nil || reading.weekSonnetUsed != nil {
                     HStack(spacing: 16) {
-                        if let opus = reading.weekOpusUsed { Meter(title: "Opus this week", used: opus) }
-                        if let sonnet = reading.weekSonnetUsed { Meter(title: "Sonnet this week", used: sonnet) }
+                        if let opus = reading.weekOpusUsed { Meter(title: "Opus this week", used: opus, animated: live) }
+                        if let sonnet = reading.weekSonnetUsed { Meter(title: "Sonnet this week", used: sonnet, animated: live) }
                     }
                 }
                 Divider()

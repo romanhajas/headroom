@@ -17,11 +17,15 @@ mobile apps.
 - **A desktop widget**, small or medium. A ring shows how much of the session is
   used, with a live countdown to its reset inside; a bar shows the week. Green
   while there's room, orange past half, red near the limit. Click it to refresh.
-- **A menu bar item** with the session percentage. Click it for the details,
-  including the separate Opus and Sonnet weekly limits when your plan has them.
+- **Your pace at a glance.** A thin bar under the countdown fills as the 5 hours
+  pass. When the ring is ahead of it, you're on course to hit the limit before
+  the reset.
+- **A menu bar item:** a small ring that fills as the session is used, with the
+  percentage or the time left next to it. Click it for the details, including
+  the separate Opus and Sonnet weekly limits when your plan has them.
 - **Settings** to hide the menu bar item, choose what it shows next to the icon
-  (session used, time left, or nothing), set how often to check, and start
-  Headroom at login. With the menu bar item hidden, open Headroom again from
+  (session used, time left, or nothing), set how often to check (every 1 to 15
+  minutes), and start Headroom at login. With the menu bar item hidden, open Headroom again from
   Applications or Spotlight to get back to Settings.
 - **Honest states.** When the figures can't be trusted, the widget says why:
   *Paused · open Claude Code* when Claude Code hasn't run for a while (see below),
@@ -46,15 +50,13 @@ Claude subscription (Pro or Max). Building needs Xcode or the Command Line
 Tools; the built app needs neither. It's a universal app for Apple silicon and
 Intel.
 
-The app is ad-hoc signed. If you downloaded it rather than built it, macOS
-blocks the first open: go to **System Settings → Privacy & Security → Open
-Anyway**. The first time it reads Claude Code's sign-in, macOS may ask whether
-`security` may use the keychain item *Claude Code-credentials*; choose
-**Always Allow**.
+Downloads are signed and notarized by Apple, so they open normally. The first
+time Headroom reads Claude Code's sign-in, macOS may ask whether `security` may
+use the keychain item *Claude Code-credentials*; choose **Always Allow**.
 
 ## How it works
 
-- Every 3 minutes, and when you click the widget or wake the Mac, the app asks
+- Every 3 minutes by default, and when you click the widget or wake the Mac, the app asks
   Anthropic's usage endpoint (`api.anthropic.com/api/oauth/usage`, the one behind
   Claude's usage page) for your figures. That call is read-only: it uses no
   tokens and doesn't start a session. When the server asks it to slow down, it
@@ -78,8 +80,13 @@ Anyway**. The first time it reads Claude Code's sign-in, macOS may ask whether
 - Uninstall: quit Headroom from its menu, delete the app, and remove
   `~/Library/Application Support/Headroom`.
 - **A personal badge:** put an SVG at `Support/Local/Badge.svg` before building
-  and it shows small in the widget's corner. That folder is git-ignored, so the
-  image stays on your Mac.
+  and it shows small in the widget's corner. Add two poses, `Badge-walk-1.svg`
+  and `Badge-walk-2.svg`, and it walks along the menu bar popover. That folder
+  is git-ignored, so the images stay on your Mac.
+- **Signed releases:** `./build.sh --release` signs with your Developer ID,
+  notarizes and zips the app when `.signing.env` names your certificate and
+  notarytool profile (see the top of `build.sh`). Without it, builds are signed
+  ad-hoc, which is fine on your own Mac.
 - The icon is drawn by `tools/make-icon.swift`.
 
 Not affiliated with Anthropic. Claude is a trademark of Anthropic.
