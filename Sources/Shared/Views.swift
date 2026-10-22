@@ -129,7 +129,7 @@ struct SessionRing: View {
             }
             .lineLimit(1)
             .minimumScaleFactor(0.6)
-            .padding(lineWidth + 6)
+            .padding(lineWidth + 10)
         }
         .opacity(reading.note.map { $0.isCalm ? 0.75 : 0.5 } ?? 1)
         .animation(.smooth, value: used)
