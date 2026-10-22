@@ -44,7 +44,7 @@ struct LimitsProvider: TimelineProvider {
     func getTimeline(in context: Context, completion: @escaping (Timeline<LimitsEntry>) -> Void) {
         let now = Date(), limits = LimitsStore.load()
         let days = context.family == .systemLarge ? History.perDay(History.load(), now: now) : []
-        var moments = [now] + Reading.changes(of: limits, after: now)
+        var moments = [now] + Reading.changes(of: limits, after: now, staleAfter: Reading.widgetStaleAfter)
         // The inner ring moves with the clock: an entry every 2 minutes while a session runs.
         // Planned entries don't count against the widget's reload allowance.
         if let ends = limits?.session?.resetsAt, ends > now {
@@ -60,7 +60,7 @@ struct LimitsWidgetView: View {
     let entry: LimitsEntry
 
     var body: some View {
-        let reading = Reading(entry.limits, at: entry.date)
+        let reading = Reading(entry.limits, at: entry.date, staleAfter: Reading.widgetStaleAfter)
         switch family {
         case .systemLarge: LargeLimits(reading: reading, days: entry.days)
         case .systemMedium: MediumLimits(reading: reading)

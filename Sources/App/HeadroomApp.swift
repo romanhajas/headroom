@@ -133,7 +133,8 @@ final class Monitor: ObservableObject {
     private var clock: Timer?
     private var notBefore: Date?
     private var backoff: TimeInterval = 0
-    private var widgetShows: String?
+    private var widgetMatters: String?
+    private var widgetFigures: String?
     private var widgetReloaded = Date.distantPast
 
     var interval: TimeInterval {
@@ -190,17 +191,21 @@ final class Monitor: ObservableObject {
         reloadWidget()
     }
 
-    /// Reloads the widget only when what it shows changes, plus every 20 minutes so it
-    /// never flags fresh figures as old. macOS limits how often a widget may reload.
+    /// Reloads the widget when what it shows changes. macOS allows a widget only a few
+    /// dozen reloads a day and silently drops the rest, so they're spent carefully:
+    /// what matters (a new session, a warning, the status) goes out at once; the
+    /// percentages at most every 10 minutes; and every 2 hours regardless, so the
+    /// widget never takes fresh figures for old ones.
     private func reloadWidget() {
         let r = Reading(limits, at: .now)
-        let shows = [percent(r.sessionUsed), percent(r.weekUsed),
-                     r.sessionEnds.map { "\(Int($0.timeIntervalSince1970 / 60))" } ?? "-",
-                     r.note?.text ?? "", limits?.status.rawValue ?? "",
-                     r.runsOutAt.map { "\(Int($0.timeIntervalSince1970 / 60))" } ?? "",
-                     r.weekRunsOutAt.map { "\(Int($0.timeIntervalSince1970 / 3600))" } ?? ""].joined(separator: "|")
-        guard shows != widgetShows || Date.now.timeIntervalSince(widgetReloaded) > 20 * 60 else { return }
-        widgetShows = shows
+        let matters = [r.sessionEnds.map { "\(Int($0.timeIntervalSince1970 / 60))" } ?? "-",
+                       r.note?.text ?? "", limits?.status.rawValue ?? "",
+                       r.runsOutAt == nil ? "" : "pace", r.weekRunsOutAt == nil ? "" : "week pace"].joined(separator: "|")
+        let figures = percent(r.sessionUsed) + "|" + percent(r.weekUsed)
+        let since = Date.now.timeIntervalSince(widgetReloaded)
+        guard matters != widgetMatters || (figures != widgetFigures && since > 10 * 60) || since > 2 * 3600 else { return }
+        widgetMatters = matters
+        widgetFigures = figures
         widgetReloaded = .now
         WidgetCenter.shared.reloadAllTimelines()
     }

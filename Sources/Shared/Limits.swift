@@ -125,6 +125,9 @@ struct Reading {
 
     /// Figures older than this are flagged: the app isn't getting new ones.
     static let staleAfter: TimeInterval = 40 * 60
+    /// The widget hears from the app less often (macOS rations its reloads; unchanged
+    /// figures are re-sent every 2 hours), so it waits longer before flagging them.
+    static let widgetStaleAfter: TimeInterval = 150 * 60
     /// The session window's length.
     static let window: TimeInterval = 5 * 3600
     /// Too early in a session to judge its pace.
@@ -144,7 +147,7 @@ struct Reading {
         return out > now && out < ends ? out : nil
     }
 
-    init(_ limits: Limits?, at now: Date) {
+    init(_ limits: Limits?, at now: Date, staleAfter: TimeInterval = Reading.staleAfter) {
         at = now
         guard let limits else { note = .noData; return }
         func current(_ window: Limits.Window?) -> (Double?, Date?) {
@@ -164,7 +167,7 @@ struct Reading {
         weekRunsOutAt = Self.runsOut(used: weekUsed, ends: weekResets, measured: limits.measuredAt,
                                      window: Self.weekWindow, judgeAfter: Self.weekPaceAfter, now: now)
 
-        let stale = limits.measuredAt.map { now.timeIntervalSince($0) > Self.staleAfter } ?? true
+        let stale = limits.measuredAt.map { now.timeIntervalSince($0) > staleAfter } ?? true
         guard stale else { return }
         switch limits.status {
         case .ok: note = limits.measuredAt == nil ? .noData : .notUpdating
@@ -178,7 +181,7 @@ struct Reading {
 
     /// Moments after `now` when the reading changes with no new data: a window
     /// resets, or the figures get old enough to flag.
-    static func changes(of limits: Limits?, after now: Date) -> [Date] {
+    static func changes(of limits: Limits?, after now: Date, staleAfter: TimeInterval = Reading.staleAfter) -> [Date] {
         guard let limits else { return [] }
         let moments = [limits.session?.resetsAt, limits.week?.resetsAt, limits.measuredAt?.addingTimeInterval(staleAfter),
                        Reading(limits, at: now).runsOutAt]
