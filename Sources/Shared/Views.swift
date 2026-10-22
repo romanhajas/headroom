@@ -79,9 +79,6 @@ struct SessionRing: View {
     var animated = false
     @State private var shown: Double?
 
-    /// The session window's length.
-    static let window: TimeInterval = 5 * 3600
-
     var body: some View {
         let used = min(1, reading.sessionUsed ?? 0)
         let drawn = animated ? (shown ?? 0) : used
@@ -102,17 +99,6 @@ struct SessionRing: View {
                         .font(.system(.title3, design: .rounded).weight(.semibold))
                         .monospacedDigit()
                         .multilineTextAlignment(.center)
-                    // How much of the 5 hours is left, emptying live with the countdown
-                    // above it (widgets allow this one).
-                    ProgressView(timerInterval: ends.addingTimeInterval(-Self.window)...ends, countsDown: true) {
-                        EmptyView()
-                    } currentValueLabel: {
-                        EmptyView()
-                    }
-                    .progressViewStyle(.linear)
-                    .tint(Color.secondary)
-                    .frame(width: lineWidth * 5)
-                    .padding(.vertical, 2)
                     Group {
                         if animated {
                             CountingPercent(value: drawn, suffix: " used")
@@ -182,7 +168,8 @@ struct Meter: View {
     }
 }
 
-/// "Session", or why the figures can't be trusted right now.
+/// "Session", or why the figures can't be trusted right now, or when you'll hit the
+/// limit if you keep going at this pace.
 struct StatusLine: View {
     let reading: Reading
     var title = "Session"
@@ -192,6 +179,9 @@ struct StatusLine: View {
             if let note = reading.note {
                 Label(note.text, systemImage: note.symbol)
                     .foregroundStyle(note.isCalm ? Color.secondary : Color.orange)
+            } else if let out = reading.runsOutAt {
+                Label("Limit at \(When.clock(out)) at this pace", systemImage: "gauge.with.dots.needle.100percent")
+                    .foregroundStyle(.orange)
             } else {
                 Text(title).foregroundStyle(.secondary)
             }

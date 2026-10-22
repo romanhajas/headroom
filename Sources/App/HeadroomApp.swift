@@ -183,7 +183,8 @@ final class Monitor: ObservableObject {
         let r = Reading(limits, at: .now)
         let shows = [percent(r.sessionUsed), percent(r.weekUsed),
                      r.sessionEnds.map { "\(Int($0.timeIntervalSince1970 / 60))" } ?? "-",
-                     r.note?.text ?? "", limits?.status.rawValue ?? ""].joined(separator: "|")
+                     r.note?.text ?? "", limits?.status.rawValue ?? "",
+                     r.runsOutAt.map { "\(Int($0.timeIntervalSince1970 / 60))" } ?? ""].joined(separator: "|")
         guard shows != widgetShows || Date.now.timeIntervalSince(widgetReloaded) > 20 * 60 else { return }
         widgetShows = shows
         widgetReloaded = .now

@@ -110,9 +110,16 @@ struct Reading {
     var weekSonnetUsed: Double?
     var measuredAt: Date?
     var note: Note?
+    /// When the session limit will be hit at the pace used so far, if that's before
+    /// the session resets; nil while there's room to spare.
+    var runsOutAt: Date?
 
     /// Figures older than this are flagged: the app isn't getting new ones.
     static let staleAfter: TimeInterval = 40 * 60
+    /// The session window's length.
+    static let window: TimeInterval = 5 * 3600
+    /// Too early in a session to judge its pace.
+    static let paceAfter: TimeInterval = 15 * 60
 
     init(_ limits: Limits?, at now: Date) {
         guard let limits else { note = .noData; return }
@@ -126,6 +133,15 @@ struct Reading {
         weekOpusUsed = current(limits.weekOpus).0
         weekSonnetUsed = current(limits.weekSonnet).0
         measuredAt = limits.measuredAt
+
+        // Pace: the share used per second so far, as of the reading, run forward.
+        if let used = sessionUsed, used > 0, used < 1, let ends = sessionEnds, let measured = limits.measuredAt {
+            let elapsed = Self.window - ends.timeIntervalSince(measured)
+            if elapsed >= Self.paceAfter {
+                let out = measured.addingTimeInterval((1 - used) / (used / elapsed))
+                if out > now && out < ends { runsOutAt = out }
+            }
+        }
 
         let stale = limits.measuredAt.map { now.timeIntervalSince($0) > Self.staleAfter } ?? true
         guard stale else { return }
@@ -143,7 +159,8 @@ struct Reading {
     /// resets, or the figures get old enough to flag.
     static func changes(of limits: Limits?, after now: Date) -> [Date] {
         guard let limits else { return [] }
-        let moments = [limits.session?.resetsAt, limits.week?.resetsAt, limits.measuredAt?.addingTimeInterval(staleAfter)]
+        let moments = [limits.session?.resetsAt, limits.week?.resetsAt, limits.measuredAt?.addingTimeInterval(staleAfter),
+                       Reading(limits, at: now).runsOutAt]
         return moments.compactMap { $0?.addingTimeInterval(1) }.filter { $0 > now }.sorted()
     }
 }
