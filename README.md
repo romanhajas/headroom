@@ -14,17 +14,27 @@ mobile apps.
 
 ## What you get
 
-- **A desktop widget**, small or medium. A ring shows how much of the session is
+- **A desktop widget** in three sizes. A ring shows how much of the session is
   used, with a live countdown to its reset inside; a bar shows the week. Green
   while there's room, orange past half, red near the limit. Click it to refresh.
+  The large size adds the Opus and Sonnet weekly limits and a chart of how much
+  of the weekly limit you used each day this week.
 - **Two rings.** The outer ring is how much of the session you've used; the thin
   inner one is how much of its 5 hours has passed, moving like a clock. When the
   outer ring is ahead, you're going faster than the time, and the widget says
   when you'd hit the limit at that pace, for example *Limit at 14:50 at this
-  pace*. Otherwise it stays quiet.
+  pace*. Otherwise it stays quiet. The week gets the same warning, for example
+  *Limit Sat 18:00 at this pace*.
+- **Notifications** at 80% and 95% of the session and of the week, when you'd hit
+  a limit early at your current pace, and when a heavy session has reset. Each
+  is sent once per session or week, and each group can be switched off.
 - **A menu bar item:** a small ring that fills as the session is used, with the
   percentage or the time left next to it. Click it for the details, including
-  the separate Opus and Sonnet weekly limits when your plan has them.
+  the separate Opus and Sonnet weekly limits when your plan has them, and the
+  week's usage per day.
+- **Update check.** Once a day Headroom asks GitHub for the latest release and
+  tells you in the menu when there's a newer version. It never downloads or
+  installs anything itself.
 - **Settings** to hide the menu bar item, choose what it shows next to the icon
   (session used, time left, or nothing), set how often to check (every 1 to 15
   minutes), and start Headroom at login. With the menu bar item hidden, open Headroom again from
@@ -66,9 +76,10 @@ use the keychain item *Claude Code-credentials*; choose **Always Allow**.
 - It signs in with Claude Code's own sign-in, read from your login keychain
   through `/usr/bin/security`. The sign-in is never saved, logged or sent
   anywhere else.
-- It saves only the figures, to
-  `~/Library/Application Support/Headroom/limits.json`. The widget runs in
-  macOS's sandbox and may read that one folder, nothing else.
+- It saves only the figures, to `~/Library/Application Support/Headroom`:
+  the latest reading in `limits.json`, and a month of readings for the chart in
+  `history.json` (one entry when the figures change, or every 15 minutes). The
+  widget runs in macOS's sandbox and may read that one folder, nothing else.
 - **Why "Paused"?** Claude Code's sign-in only lasts a few hours and Claude Code
   renews it whenever it runs. After a while without Claude Code, the server would
   refuse the old one, so Headroom waits instead of showing an error. Open Claude

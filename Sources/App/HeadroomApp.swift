@@ -27,6 +27,11 @@ enum Prefs {
     static let refreshMinutes = "refreshMinutes"
     static let animations = "animations"
     static let setUpLoginItem = "setUpLoginItem"
+    static let notifySession = "notifySession"
+    static let notifyPace = "notifyPace"
+    static let notifyWeek = "notifyWeek"
+    static let checkUpdates = "checkUpdates"
+    static let lastUpdateCheck = "lastUpdateCheck"
 }
 
 /// What the menu bar shows next to the gauge.
@@ -90,7 +95,9 @@ enum MenuBarIcon {
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
+        Notifier.requestPermission()
         Monitor.shared.start()
+        Updater.shared.checkIfDue()
         // Start with the Mac by default, once; Settings has the switch.
         if !UserDefaults.standard.bool(forKey: Prefs.setUpLoginItem) {
             UserDefaults.standard.set(true, forKey: Prefs.setUpLoginItem)
@@ -117,6 +124,8 @@ final class Monitor: ObservableObject {
 
     @Published private(set) var limits = LimitsStore.load()
     @Published private(set) var busy = false
+    /// The weekly limit used per day, for the chart.
+    @Published private(set) var days = History.perDay(History.load())
     /// Ticks every 30 seconds, so the menu bar's "time left" keeps moving.
     @Published private(set) var now = Date()
 
@@ -164,8 +173,12 @@ final class Monitor: ObservableObject {
     private func apply(_ result: Fetcher.Result) {
         busy = false
         now = Date()
+        Notifier.check(old: limits, new: result.limits)
         limits = result.limits
         try? LimitsStore.save(result.limits)
+        History.record(result.limits)
+        days = History.perDay(History.load())
+        Updater.shared.checkIfDue()
         if let wait = result.retryAfter {
             // Wait at least 3 minutes after the server pushes back, whatever the interval.
             backoff = min(30 * 60, max(3 * 60, interval, wait, backoff * 2))
@@ -184,7 +197,8 @@ final class Monitor: ObservableObject {
         let shows = [percent(r.sessionUsed), percent(r.weekUsed),
                      r.sessionEnds.map { "\(Int($0.timeIntervalSince1970 / 60))" } ?? "-",
                      r.note?.text ?? "", limits?.status.rawValue ?? "",
-                     r.runsOutAt.map { "\(Int($0.timeIntervalSince1970 / 60))" } ?? ""].joined(separator: "|")
+                     r.runsOutAt.map { "\(Int($0.timeIntervalSince1970 / 60))" } ?? "",
+                     r.weekRunsOutAt.map { "\(Int($0.timeIntervalSince1970 / 3600))" } ?? ""].joined(separator: "|")
         guard shows != widgetShows || Date.now.timeIntervalSince(widgetReloaded) > 20 * 60 else { return }
         widgetShows = shows
         widgetReloaded = .now
@@ -194,6 +208,7 @@ final class Monitor: ObservableObject {
 
 struct DetailView: View {
     @EnvironmentObject private var monitor: Monitor
+    @ObservedObject private var updater = Updater.shared
     @AppStorage(Prefs.animations) private var animations = true
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -202,6 +217,16 @@ struct DetailView: View {
         TimelineView(.periodic(from: .now, by: 30)) { context in
             let reading = Reading(monitor.limits, at: context.date)
             VStack(alignment: .leading, spacing: 14) {
+                if let release = updater.available {
+                    HStack {
+                        Label("Headroom \(release.version) is available", systemImage: "arrow.down.circle.fill")
+                            .font(.callout.weight(.medium)).foregroundStyle(.blue)
+                        Spacer()
+                        Link("Download", destination: release.page)
+                    }
+                    .padding(8)
+                    .background(Color.blue.opacity(0.1), in: RoundedRectangle(cornerRadius: 8))
+                }
                 MediumLimits(reading: reading, live: live, busy: monitor.busy)
                     .frame(height: 118)
                 if reading.weekOpusUsed != nil || reading.weekSonnetUsed != nil {
@@ -210,6 +235,8 @@ struct DetailView: View {
                         if let sonnet = reading.weekSonnetUsed { Meter(title: "Sonnet this week", used: sonnet, animated: live) }
                     }
                 }
+                WeekChart(days: monitor.days)
+                    .frame(height: 84)
                 Divider()
                 HStack {
                     Text(reading.measuredAt.map { "Updated \(When.dayClock($0))" } ?? "No reading yet")

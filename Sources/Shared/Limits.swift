@@ -113,6 +113,8 @@ struct Reading {
     /// When the session limit will be hit at the pace used so far, if that's before
     /// the session resets; nil while there's room to spare.
     var runsOutAt: Date?
+    /// The same for the weekly limit.
+    var weekRunsOutAt: Date?
     /// The moment this reading is for.
     var at = Date.distantPast
 
@@ -127,6 +129,20 @@ struct Reading {
     static let window: TimeInterval = 5 * 3600
     /// Too early in a session to judge its pace.
     static let paceAfter: TimeInterval = 15 * 60
+    /// The same for the week.
+    static let weekWindow: TimeInterval = 7 * 86400
+    static let weekPaceAfter: TimeInterval = 24 * 3600
+
+    /// When `used` reaches 100% if it keeps rising at the rate it did since its window
+    /// opened, as of `measured`; nil if that's after the window ends, or too early to say.
+    static func runsOut(used: Double?, ends: Date?, measured: Date?, window: TimeInterval,
+                        judgeAfter: TimeInterval, now: Date) -> Date? {
+        guard let used, used > 0, used < 1, let ends, let measured else { return nil }
+        let elapsed = window - ends.timeIntervalSince(measured)
+        guard elapsed >= judgeAfter else { return nil }
+        let out = measured.addingTimeInterval((1 - used) / (used / elapsed))
+        return out > now && out < ends ? out : nil
+    }
 
     init(_ limits: Limits?, at now: Date) {
         at = now
@@ -143,13 +159,10 @@ struct Reading {
         measuredAt = limits.measuredAt
 
         // Pace: the share used per second so far, as of the reading, run forward.
-        if let used = sessionUsed, used > 0, used < 1, let ends = sessionEnds, let measured = limits.measuredAt {
-            let elapsed = Self.window - ends.timeIntervalSince(measured)
-            if elapsed >= Self.paceAfter {
-                let out = measured.addingTimeInterval((1 - used) / (used / elapsed))
-                if out > now && out < ends { runsOutAt = out }
-            }
-        }
+        runsOutAt = Self.runsOut(used: sessionUsed, ends: sessionEnds, measured: limits.measuredAt,
+                                 window: Self.window, judgeAfter: Self.paceAfter, now: now)
+        weekRunsOutAt = Self.runsOut(used: weekUsed, ends: weekResets, measured: limits.measuredAt,
+                                     window: Self.weekWindow, judgeAfter: Self.weekPaceAfter, now: now)
 
         let stale = limits.measuredAt.map { now.timeIntervalSince($0) > Self.staleAfter } ?? true
         guard stale else { return }

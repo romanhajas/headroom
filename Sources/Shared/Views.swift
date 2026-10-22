@@ -1,6 +1,7 @@
 // Views.swift - the ring, meters and layouts, shared by the widget and the menu bar popover.
 
 import AppKit
+import Charts
 import SwiftUI
 
 func percent(_ value: Double?) -> String {
@@ -144,11 +145,13 @@ struct SessionRing: View {
     }
 }
 
-/// A labelled bar for one limit. `animated` works as for SessionRing.
+/// A labelled bar for one limit. `animated` works as for SessionRing; `warning` shows
+/// the detail line in orange.
 struct Meter: View {
     let title: String
     let used: Double?
     var detail: String? = nil
+    var warning = false
     var animated = false
     @State private var shown: Double?
 
@@ -179,7 +182,8 @@ struct Meter: View {
             }
             .frame(height: 5)
             if let detail {
-                Text(detail).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+                Text(detail).font(.caption2).foregroundStyle(warning ? Color.orange : Color.secondary).lineLimit(1)
+                    .minimumScaleFactor(0.8)
             }
         }
         .animation(.smooth, value: target)
@@ -224,7 +228,61 @@ struct SmallLimits: View {
             }
             SessionRing(reading: reading)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-            Meter(title: "Week", used: reading.weekUsed)
+            Meter(title: "Week", used: reading.weekUsed,
+                  detail: reading.weekRunsOutAt.map { "Limit \(When.dayClock($0)) at this pace" }, warning: true)
+        }
+    }
+}
+
+/// The weekly limit used per day over the last week, today highlighted.
+struct WeekChart: View {
+    let days: [History.Day]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Weekly limit used per day").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+            if days.allSatisfy({ $0.used == 0 }) {
+                Text("Builds up as Headroom keeps track of your usage.")
+                    .font(.caption2).foregroundStyle(.tertiary)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+            } else {
+                Chart(days) { day in
+                    BarMark(x: .value("Day", day.date, unit: .day), y: .value("Used", day.used * 100))
+                        .foregroundStyle(Calendar.current.isDateInToday(day.date) ? Color.orange : Color.secondary.opacity(0.5))
+                        .cornerRadius(3)
+                }
+                .chartYAxis {
+                    AxisMarks(position: .trailing, values: .automatic(desiredCount: 3)) { value in
+                        AxisGridLine()
+                        AxisValueLabel { if let v = value.as(Double.self) { Text("\(Int(v))%") } }
+                    }
+                }
+                .chartXAxis {
+                    AxisMarks(values: .stride(by: .day)) { _ in
+                        AxisValueLabel(format: .dateTime.weekday(.abbreviated), centered: true)
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// The large widget: the medium layout, the per-model weekly limits, and the week's chart.
+struct LargeLimits: View {
+    let reading: Reading
+    let days: [History.Day]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            MediumLimits(reading: reading)
+                .frame(height: 132)
+            if reading.weekOpusUsed != nil || reading.weekSonnetUsed != nil {
+                HStack(spacing: 16) {
+                    if let opus = reading.weekOpusUsed { Meter(title: "Opus this week", used: opus) }
+                    if let sonnet = reading.weekSonnetUsed { Meter(title: "Sonnet this week", used: sonnet) }
+                }
+            }
+            WeekChart(days: days)
         }
     }
 }
@@ -436,7 +494,9 @@ struct MediumLimits: View {
                       detail: reading.sessionEnds.map { "Resets \(When.clock($0))" } ?? "Starts with your next message",
                       animated: live)
                 Meter(title: "This week", used: reading.weekUsed,
-                      detail: reading.weekResets.map { "Resets \(When.dayClock($0))" }, animated: live)
+                      detail: reading.weekRunsOutAt.map { "Limit \(When.dayClock($0)) at this pace" }
+                          ?? reading.weekResets.map { "Resets \(When.dayClock($0))" },
+                      warning: reading.weekRunsOutAt != nil, animated: live)
             }
         }
     }
