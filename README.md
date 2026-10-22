@@ -45,7 +45,13 @@ mobile apps.
 
 ## Install
 
-Download `Headroom.zip` from the releases page, unzip it, move **Headroom.app**
+With [Homebrew](https://brew.sh):
+
+```bash
+brew install --cask romanhajas/tap/headroom
+```
+
+Or download `Headroom.zip` from the releases page, unzip it, move **Headroom.app**
 to Applications and open it. Or build it:
 
 ```bash
