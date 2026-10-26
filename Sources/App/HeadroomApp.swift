@@ -31,6 +31,7 @@ enum Prefs {
     static let notifyPace = "notifyPace"
     static let notifyWeek = "notifyWeek"
     static let checkUpdates = "checkUpdates"
+    static let installUpdates = "installUpdates"
     static let lastUpdateCheck = "lastUpdateCheck"
 }
 
@@ -224,10 +225,17 @@ struct DetailView: View {
             VStack(alignment: .leading, spacing: 14) {
                 if let release = updater.available {
                     HStack {
-                        Label("Headroom \(release.version) is available", systemImage: "arrow.down.circle.fill")
+                        Label(updater.installing ? "Updating to Headroom \(release.version)…" : "Headroom \(release.version) is available",
+                              systemImage: "arrow.down.circle.fill")
                             .font(.callout.weight(.medium)).foregroundStyle(.blue)
                         Spacer()
-                        Link("Download", destination: release.page)
+                        if updater.installing {
+                            ProgressView().controlSize(.small)
+                        } else if updater.canInstall, release.download != nil {
+                            Button("Install") { updater.install(release, now: true) }
+                        } else {
+                            Link("Download", destination: release.page)
+                        }
                     }
                     .padding(8)
                     .background(Color.blue.opacity(0.1), in: RoundedRectangle(cornerRadius: 8))

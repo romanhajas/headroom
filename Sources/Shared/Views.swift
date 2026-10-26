@@ -30,8 +30,8 @@ enum When {
     }
 }
 
-/// An optional personal badge in the corner. build.sh bundles it from
-/// Support/Local/Badge.svg when that file exists; the folder is never committed.
+/// An optional personal badge in the corner: Badge.svg in Headroom's folder in
+/// Application Support, outside the app, so it stays put when Headroom updates.
 struct Badge: View {
     static let image = load("Badge")
     /// Two optional poses (Badge-walk-1.svg, Badge-walk-2.svg) that make it walk in the popover.
@@ -40,7 +40,7 @@ struct Badge: View {
     static let sleepPose = load("Badge-sleep")
 
     static func load(_ name: String) -> NSImage? {
-        Bundle.main.url(forResource: name, withExtension: "svg").flatMap(NSImage.init(contentsOf:))
+        NSImage(contentsOf: LimitsStore.folder.appendingPathComponent("\(name).svg"))
     }
 
     var size: CGFloat = 16

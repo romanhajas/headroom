@@ -63,14 +63,6 @@ rm "$BUILD"/Headroom-* "$BUILD"/HeadroomWidget-*
 cp "$SRC/Support/App-Info.plist" "$APP/Contents/Info.plist"
 cp "$SRC/Support/Widget-Info.plist" "$EXT/Contents/Info.plist"
 cp "$SRC/Support/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
-# A personal badge for the widget's corner, if you keep one in Support/Local (not
-# committed). Left out of release builds.
-if (( ! RELEASE )) && [[ -f "$SRC/Support/Local/Badge.svg" ]]; then
-  mkdir -p "$EXT/Contents/Resources"
-  # With any extra poses: walking (the popover), sleeping (popover and widget).
-  cp "$SRC"/Support/Local/Badge*.svg "$APP/Contents/Resources/"
-  cp "$SRC"/Support/Local/Badge*.svg "$EXT/Contents/Resources/"
-fi
 
 # Sign inside out: the widget with its sandbox, then the app around it.
 codesign "${SIGN[@]}" --entitlements "$SRC/Support/Widget.entitlements" "$EXT"

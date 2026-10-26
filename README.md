@@ -32,9 +32,11 @@ mobile apps.
   percentage or the time left next to it. Click it for the details, including
   the separate Opus and Sonnet weekly limits when your plan has them, and the
   week's usage per day.
-- **Update check.** Once a day Headroom asks GitHub for the latest release and
-  tells you in the menu when there's a newer version. It never downloads or
-  installs anything itself.
+- **Updates itself.** Once a day Headroom asks GitHub for the latest release.
+  When there's a newer one it downloads it, checks that it's signed by the same
+  developer as the copy you have, swaps it in and restarts, waiting until you're
+  not using Headroom. A download that isn't signed that way is thrown away. You
+  can turn this off in Settings and install updates with a click instead.
 - **Settings** to hide the menu bar item, choose what it shows next to the icon
   (session used, time left, or nothing), set how often to check (every 1 to 15
   minutes), and start Headroom at login. With the menu bar item hidden, open Headroom again from
@@ -98,10 +100,11 @@ use the keychain item *Claude Code-credentials*; choose **Always Allow**.
   time, and Headroom would then show *Couldn't read usage* until it's updated.
 - Uninstall: quit Headroom from its menu, delete the app, and remove
   `~/Library/Application Support/Headroom`.
-- **A personal badge:** put an SVG at `Support/Local/Badge.svg` before building
-  and it shows small in the widget's corner. Add two poses, `Badge-walk-1.svg`
-  and `Badge-walk-2.svg`, and it walks along the menu bar popover. That folder
-  is git-ignored, so the images stay on your Mac.
+- **A personal badge:** put an SVG named `Badge.svg` in
+  `~/Library/Application Support/Headroom` and it shows small in the widget's
+  corner. Add two poses, `Badge-walk-1.svg` and `Badge-walk-2.svg`, and it walks
+  along the menu bar popover; `Badge-sleep.svg` is for while Headroom is paused.
+  They live outside the app, so updates keep them.
 - **Signed releases:** `./build.sh --release` signs with your Developer ID,
   notarizes and zips the app when `.signing.env` names your certificate and
   notarytool profile (see the top of `build.sh`). Without it, builds are signed

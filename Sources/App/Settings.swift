@@ -38,6 +38,7 @@ struct SettingsView: View {
     @AppStorage(Prefs.notifyPace) private var notifyPace = true
     @AppStorage(Prefs.notifyWeek) private var notifyWeek = true
     @AppStorage(Prefs.checkUpdates) private var checkUpdates = true
+    @AppStorage(Prefs.installUpdates) private var installUpdates = true
     @ObservedObject private var updater = Updater.shared
     @State private var opensAtLogin = SMAppService.mainApp.status == .enabled
 
@@ -89,15 +90,21 @@ struct SettingsView: View {
             }
             Section("Headroom \(version)") {
                 Toggle("Check for new versions once a day", isOn: $checkUpdates)
+                Toggle("Install them automatically", isOn: $installUpdates)
+                    .disabled(!checkUpdates)
                 HStack {
-                    if let release = updater.available {
-                        Link("Download Headroom \(release.version)", destination: release.page)
-                    } else {
-                        Text(updater.lastResult ?? "").foregroundStyle(.secondary)
-                    }
+                    Text(updater.lastResult ?? "").foregroundStyle(.secondary)
                     Spacer()
-                    Button(updater.checking ? "Checking…" : "Check Now") { updater.check() }
-                        .disabled(updater.checking)
+                    if let release = updater.available, !updater.installing {
+                        if updater.canInstall, release.download != nil {
+                            Button("Install \(release.version)") { updater.install(release, now: true) }
+                        } else {
+                            Link("Download \(release.version)", destination: release.page)
+                        }
+                    } else {
+                        Button(updater.checking ? "Checking…" : "Check Now") { updater.check(asked: true) }
+                            .disabled(updater.checking || updater.installing)
+                    }
                     Link("GitHub", destination: URL(string: "https://github.com/romanhajas/headroom")!)
                 }
             }
